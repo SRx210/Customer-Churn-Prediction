@@ -22,12 +22,6 @@ __pypackages__/
 venv/
 venv.bak/
 
-exports/
-*.pkl
-*.joblib
-*.h5
-*.model
-
 .vscode/
 .idea/
 *.swp
