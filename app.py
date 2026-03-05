@@ -345,7 +345,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown('<div class="section-label">API Config</div>', unsafe_allow_html=True)
-    api_url = st.text_input("Flask API URL", value="http://localhost:5000", help="Base URL of your running Flask server")
+    api_url = st.text_input("Flask API URL", value="https://churn-sight-flask.onrender.com", help="Base URL of your running Flask server")
 
     st.markdown("---")
     st.markdown('<div class="section-label">About</div>', unsafe_allow_html=True)
