@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import pandas as pd
+import numpy as np
 import pickle
 import os
 import logging
@@ -50,32 +50,35 @@ def predict():
             return jsonify({"error": "Invalid or missing JSON body."}), 400
 
         if isinstance(data, dict):
-            input_df = pd.DataFrame([data])
+            records = [data]
         elif isinstance(data, list):
             if len(data) == 0:
                 return jsonify({"error": "Input list is empty."}), 400
-            input_df = pd.DataFrame(data)
+            records = data
         else:
             return jsonify({"error": "Input must be a JSON object or list of JSON objects."}), 400
 
-        processed_df = input_df.copy()
+        # Encode categorical columns
+        for record in records:
+            for column, encoder in encoders.items():
+                if column in record:
+                    try:
+                        record[column] = encoder.transform([str(record[column])])[0]
+                    except ValueError as e:
+                        return jsonify({"error": f"Unseen label in column '{column}': {str(e)}"}), 400
 
-        for column, encoder in encoders.items():
-            if column in processed_df.columns:
-                processed_df[column] = processed_df[column].astype(str)
-                try:
-                    processed_df[column] = encoder.transform(processed_df[column])
-                except ValueError as e:
-                    return jsonify({"error": f"Unseen label in column '{column}': {str(e)}"}), 400
-
+        # Build array in correct feature order
         if hasattr(loaded_model, 'feature_names_in_'):
-            missing_cols = set(loaded_model.feature_names_in_) - set(processed_df.columns)
+            feature_names = list(loaded_model.feature_names_in_)
+            missing_cols = set(feature_names) - set(records[0].keys())
             if missing_cols:
                 return jsonify({"error": f"Missing columns in input: {sorted(missing_cols)}"}), 400
-            processed_df = processed_df[loaded_model.feature_names_in_]
+            X = np.array([[r[f] for f in feature_names] for r in records], dtype=float)
+        else:
+            X = np.array([[v for v in r.values()] for r in records], dtype=float)
 
-        predictions = loaded_model.predict(processed_df)
-        probabilities = loaded_model.predict_proba(processed_df)
+        predictions = loaded_model.predict(X)
+        probabilities = loaded_model.predict_proba(X)
 
         results = [
             {
